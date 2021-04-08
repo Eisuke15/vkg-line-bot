@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-url = os.environ["DATABASE_URL"]
+url = os.environ["DB_URL"]
 engine = create_engine(url, convert_unicode=True)
 Session = sessionmaker(autocommit=False,autoflush=False,bind=engine)
 
