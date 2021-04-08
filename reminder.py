@@ -24,7 +24,7 @@ https://docs.google.com/spreadsheets/d/1ZrHi9Yt2w1X1oIgyvl01tBdaH7SlUwgu3UGTtRX8
 """
 
 def main():
-    if datetime.datetime.now(pytz.timezone('Asia/Tokyo')).weekday() in [1,3,4,5,6]:
+    if datetime.datetime.now(pytz.timezone('Asia/Tokyo')).weekday() in [1,3,4,5,6] and os.path.exists(data/data.txt):
         with open("data/data.txt") as f:
             groups = [line.rstrip('\n') for line in f.readlines()]
         pushText = TextSendMessage(text=remindtext)
