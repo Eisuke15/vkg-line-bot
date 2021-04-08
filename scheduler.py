@@ -21,7 +21,7 @@ handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 def main():
     pushText = TextSendMessage(text="体温を計測してね")
-    line_bot_api.broadcast(USER_ID, messages=pushText)
+    line_bot_api.broadcast(messages=pushText)
 
 if __name__ == "__main__":
     main()
