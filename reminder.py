@@ -1,15 +1,14 @@
-import os
 import datetime
+import os
+
 import pytz
-
-from linebot import (
-    LineBotApi, WebhookHandler
-)
-from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage,
-)
-
 from dotenv import load_dotenv
+from linebot import LineBotApi, WebhookHandler
+from linebot.models import MessageEvent, TextMessage, TextSendMessage
+
+from models import Base, Session, engine
+from models.models import Group_id
+
 load_dotenv()
 
 LINE_CHANNEL_ACCESS_TOKEN = os.environ["LINE_CHANNEL_ACCESS_TOKEN"]
@@ -24,12 +23,13 @@ https://docs.google.com/spreadsheets/d/1ZrHi9Yt2w1X1oIgyvl01tBdaH7SlUwgu3UGTtRX8
 """
 
 def main():
-    if datetime.datetime.now(pytz.timezone('Asia/Tokyo')).weekday() in [1,3,4,5,6] and os.path.exists("data/data.txt"):
-        with open("data/data.txt") as f:
-            groups = [line.rstrip('\n') for line in f.readlines()]
+    if datetime.datetime.now(pytz.timezone('Asia/Tokyo')).weekday() in [1,3,4,5,6] :
         pushText = TextSendMessage(text=remindtext)
+        session = Session()
+        groups = session.query(Group_id)
         for group in groups:
-            line_bot_api.push_message(to=group,messages=pushText)
+            line_bot_api.push_message(to=group.g_id,messages=pushText)
+        session.close()
 
 if __name__ == "__main__":
     main()

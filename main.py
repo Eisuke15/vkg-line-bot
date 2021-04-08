@@ -1,17 +1,15 @@
-from flask import Flask, request, abort
 import os
 
-from linebot import (
-    LineBotApi, WebhookHandler
-)
-from linebot.exceptions import (
-    InvalidSignatureError
-)
-from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage,JoinEvent
-)
-
 from dotenv import load_dotenv
+from flask import Flask, abort, request
+from linebot import LineBotApi, WebhookHandler
+from linebot.exceptions import InvalidSignatureError
+from linebot.models import (JoinEvent, MessageEvent, TextMessage,
+                            TextSendMessage)
+
+from models import Base, Session, engine
+from models.models import Group_id
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -51,14 +49,15 @@ def handle_message(event):
 @handler.add(JoinEvent)
 def handle_join(event):
     group_id = event.source.group_id
-    s = set()
-    if os.path.exists('data/data.txt'):
-        with open('data/data.txt', mode='r') as f:
-            s = set(line.rstrip('\n') for line in f.readlines())
-    s.add(group_id)
-    with open('data/data.txt', mode='w') as f:
-        f.write('\n'.join(s))
 
+    Base.metadata.create_all(bind=engine)
+    session = Session()
+    session.add(Group_id(group_id))
+    session.commit()
+    session.close()
+
+    # pushText = TextSendMessage(text="追加ありがとうございます。")
+    # line_bot_api.push_message(to=group_id,messages=pushText)
 
 if __name__ == "__main__":
     # app.run()
