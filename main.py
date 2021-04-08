@@ -59,10 +59,6 @@ def handle_join(event):
     with open('data/data.txt', mode='w') as f:
         f.write('\n'.join(s))
 
-    line_bot_api.push_message(
-        group_id,
-        TextSendMessage(text="体温を入力してね\nhttps://docs.google.com/spreadsheets/d/1ZrHi9Yt2w1X1oIgyvl01tBdaH7SlUwgu3UGTtRX8aAA/edit?usp=sharing")
-    )
 
 if __name__ == "__main__":
     # app.run()
