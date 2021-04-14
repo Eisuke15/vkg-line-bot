@@ -23,7 +23,7 @@ https://docs.google.com/spreadsheets/d/1ZrHi9Yt2w1X1oIgyvl01tBdaH7SlUwgu3UGTtRX8
 """
 
 def main():
-    if datetime.datetime.now(pytz.timezone('Asia/Tokyo')).weekday() in [1,3,4,5,6] :
+    if datetime.datetime.now(pytz.timezone('Asia/Tokyo')).weekday() in [1,3,5,6]:
         pushText = TextSendMessage(text=remindtext)
         session = Session()
         groups = session.query(Group_id)
