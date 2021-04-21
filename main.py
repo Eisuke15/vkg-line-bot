@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from flask import Flask, abort, request
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import (JoinEvent, MessageEvent, TextMessage,
+from linebot.models import (JoinEvent, LeaveEvent, MessageEvent, TextMessage,
                             TextSendMessage)
 
 from models import Base, Session, engine
@@ -58,6 +58,18 @@ def handle_join(event):
 
     # pushText = TextSendMessage(text="追加ありがとうございます。")
     # line_bot_api.push_message(to=group_id,messages=pushText)
+
+@handler.add(LeaveEvent)
+def handle_leave(event):
+    group_id = event.source.group_id
+
+    Base.metadata.create_all(bind=engine)
+    session = Session()
+    session.query(Group_id).filter(Group_id.g_id == group_id).delete()
+    session.commit()
+    session.close()
+
+
 
 if __name__ == "__main__":
     # app.run()

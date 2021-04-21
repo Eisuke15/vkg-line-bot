@@ -139,6 +139,3 @@ cython_debug/
 
 #.DS_Storeを無視
 .DS_Store
-
-#dataを無視
-data/data.txt
