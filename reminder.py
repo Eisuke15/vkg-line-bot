@@ -17,10 +17,7 @@ LINE_CHANNEL_SECRET = os.environ["LINE_CHANNEL_SECRET"]
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
-remindtext = """\
-体温を入力してね
-https://docs.google.com/spreadsheets/d/1ZrHi9Yt2w1X1oIgyvl01tBdaH7SlUwgu3UGTtRX8aAA/edit?usp=sharing
-"""
+remindtext = "体温を入力してね" + "\n" + os.environ["SPREADSHEET_URL"]
 
 def main():
     if datetime.datetime.now(pytz.timezone('Asia/Tokyo')).weekday() in [1,3,5,6]:
