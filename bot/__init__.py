@@ -9,7 +9,7 @@ from linebot.models import (JoinEvent, LeaveEvent, MessageEvent, TextMessage,
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from .models import Base, Group_id
+from .models import Base, Group
 
 load_dotenv()
 
@@ -56,7 +56,7 @@ def handle_join(event):
     group_id = event.source.group_id
 
     session = Session()
-    session.add(Group_id(group_id))
+    session.add(Group(group_id))
     session.commit()
     session.close()
 
@@ -68,6 +68,6 @@ def handle_leave(event):
     group_id = event.source.group_id
 
     session = Session()
-    session.query(Group_id).filter(Group_id.g_id == group_id).delete()
+    session.query(Group).filter(Group.g_id == group_id).delete()
     session.commit()
     session.close()
