@@ -1,14 +1,15 @@
 import os
 
-from dotenv import load_dotenv
 from flask import Flask, abort, request
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (JoinEvent, LeaveEvent, MessageEvent, TextMessage,
                             TextSendMessage)
 
-from models import Base, Session, engine
-from models.models import Group_id
+from .models import Group_id, Base
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -20,6 +21,14 @@ LINE_CHANNEL_SECRET = os.environ["LINE_CHANNEL_SECRET"]
 
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
+
+
+url = os.environ["DB_URL"]
+engine = create_engine(url, convert_unicode=True)
+Session = sessionmaker(autocommit=False,autoflush=False,bind=engine)
+
+Base.metadata.create_all(bind=engine)
+
 
 
 @app.route("/callback", methods=['POST'])
@@ -50,7 +59,6 @@ def handle_message(event):
 def handle_join(event):
     group_id = event.source.group_id
 
-    Base.metadata.create_all(bind=engine)
     session = Session()
     session.add(Group_id(group_id))
     session.commit()
@@ -63,7 +71,6 @@ def handle_join(event):
 def handle_leave(event):
     group_id = event.source.group_id
 
-    Base.metadata.create_all(bind=engine)
     session = Session()
     session.query(Group_id).filter(Group_id.g_id == group_id).delete()
     session.commit()

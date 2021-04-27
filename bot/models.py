@@ -1,5 +1,7 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime
-from models import Base
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
 
 class Group_id(Base):
     __tablename__ = 'groupids'
