@@ -1,32 +1,28 @@
 import datetime
 import os
+import sys
 
 import pytz
 from dotenv import load_dotenv
 from linebot import LineBotApi, WebhookHandler
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 
-from models import Base, Session, engine
-from models.models import Group_id
+from bot import Session, handler, line_bot_api
+from bot.models import Group
 
 load_dotenv()
 
-LINE_CHANNEL_ACCESS_TOKEN = os.environ["LINE_CHANNEL_ACCESS_TOKEN"]
-LINE_CHANNEL_SECRET = os.environ["LINE_CHANNEL_SECRET"]
-
-line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
-handler = WebhookHandler(LINE_CHANNEL_SECRET)
-
-remindtext = "体温を入力してね" + "\n" + os.environ["SPREADSHEET_URL"]
-
-def main():
-    if datetime.datetime.now(pytz.timezone('Asia/Tokyo')).weekday() in [1,3,5,6]:
+def main(week):
+    if datetime.datetime.now(pytz.timezone('Asia/Tokyo')).weekday() in week:
+        remindtext = "体温を入力してね" + "\n" + os.environ["SPREADSHEET_URL"]
         pushText = TextSendMessage(text=remindtext)
         session = Session()
-        groups = session.query(Group_id)
+        groups = session.query(Group)
         for group in groups:
-            line_bot_api.push_message(to=group.g_id,messages=pushText)
+            line_bot_api.push_message(to=group.group_id,messages=pushText)
         session.close()
 
 if __name__ == "__main__":
-    main()
+    #曜日を指定する数字列をコマンドライン引数にとる。0~6で日~土
+    week = list(map(int,sys.argv[1:]))
+    main(week)
