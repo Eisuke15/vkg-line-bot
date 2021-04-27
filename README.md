@@ -1,7 +1,7 @@
 # 開発環境で試す方法
-1. `source env/bin/activate`
-1. `docker-compose up -d`でDB起動
-1. `flask run`でデバッグ用のサーバー起動
+1. 仮想環境に入る `source env/bin/activate`
+1. バックグラウンドでDB起動 `docker-compose up -d`
+1. デバッグ用のサーバー起動 `python manage.py`
 1. 別のシェルでトンネリング
     ```shell
     $ ngrok http 5000
