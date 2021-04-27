@@ -1,35 +1,31 @@
 import os
 
+from dotenv import load_dotenv
 from flask import Flask, abort, request
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (JoinEvent, LeaveEvent, MessageEvent, TextMessage,
                             TextSendMessage)
-
-from .models import Group_id, Base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
+
+from .models import Base, Group_id
 
 load_dotenv()
 
 app = Flask(__name__)
 
-#環境変数取得
-LINE_CHANNEL_ACCESS_TOKEN = os.environ["LINE_CHANNEL_ACCESS_TOKEN"]
-LINE_CHANNEL_SECRET = os.environ["LINE_CHANNEL_SECRET"]
+#Flaskのconfig設定
+app.config['SECRET_KEY'] = os.environ["SECRET_KEY"]
 
-line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
-handler = WebhookHandler(LINE_CHANNEL_SECRET)
+#Lineのアクセストークン、アクセスキー取得
+line_bot_api = LineBotApi(os.environ["LINE_CHANNEL_ACCESS_TOKEN"])
+handler = WebhookHandler(os.environ["LINE_CHANNEL_SECRET"])
 
-
-url = os.environ["DB_URL"]
-engine = create_engine(url, convert_unicode=True)
+#DB用初期設定
+engine = create_engine(os.environ["DB_URL"], convert_unicode=True)
 Session = sessionmaker(autocommit=False,autoflush=False,bind=engine)
-
 Base.metadata.create_all(bind=engine)
-
-
 
 @app.route("/callback", methods=['POST'])
 def callback():
