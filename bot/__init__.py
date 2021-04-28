@@ -3,13 +3,12 @@ import os
 import pytz
 from dotenv import load_dotenv
 from flask import Flask, abort, request
-from flask_apscheduler import APScheduler
 from flask_migrate import Migrate
 
 from linebot.exceptions import InvalidSignatureError
 
 from .db import db
-from .handlers import bp, handler
+from . import handlers, reminder
 
 
 def create_app():
@@ -18,19 +17,18 @@ def create_app():
 
     #Flaskインスタンス
     app = Flask(__name__)
-    scheduler = APScheduler()
 
     #Flaskの初期設定
     app.config['SECRET_KEY'] = os.environ["SECRET_KEY"]
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ["DB_URL"]
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    scheduler.init_app(app)
-    scheduler.scheduler.configure(timezone=pytz.timezone('Asia/Tokyo'))
+    reminder.scheduler.init_app(app)
+    reminder.scheduler.scheduler.configure(timezone=pytz.timezone('Asia/Tokyo'))
     db.init_app(app)
     Migrate(app, db)
 
-    scheduler.start()
+    reminder.scheduler.start()
 
     @app.route("/callback", methods=['POST'])
     def callback():
@@ -43,24 +41,14 @@ def create_app():
 
         # handle webhook body
         try:
-            handler.handle(body, signature)
+            handlers.handler.handle(body, signature)
         except InvalidSignatureError:
             abort(400)
 
         return 'OK'
 
-    @scheduler.task(
-        "cron",
-        id="reminder",
-        hour="6,1"
-    )
-    def task1():
-        """Sample task 1.
-        Added when app starts.
-        """
-        print("running task 1!")
-
-    app.register_blueprint(bp)
+    app.register_blueprint(handlers.bp)
+    app.register_blueprint(reminder.bp)
 
     return app
 

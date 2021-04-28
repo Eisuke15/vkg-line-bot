@@ -10,7 +10,7 @@ from linebot.models import (JoinEvent, LeaveEvent, MessageEvent, TextMessage,
 from .db import db
 from .models import Cancellation, Group
 
-bp = Blueprint('linebot', __name__)
+bp = Blueprint('handlers', __name__)
 
 #Lineのアクセストークン、アクセスキー取得
 load_dotenv()

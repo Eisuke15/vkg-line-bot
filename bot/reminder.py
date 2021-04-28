@@ -1,7 +1,22 @@
+import os
+import pytz
+from dotenv import load_dotenv
+from flask import Blueprint
+from .db import db
+from .models import Cancellation, Group
+from flask_apscheduler import APScheduler
 
+bp = Blueprint('linebot', __name__)
+scheduler = APScheduler()
 
-
-
+@scheduler.task(
+    "cron",
+    id="reminder",
+    hour="6,1",
+    second="*/5",
+)
+def task1():
+    print("running task 1!")
 
 
 
