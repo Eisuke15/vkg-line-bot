@@ -1,14 +1,13 @@
 import os
 
-import pytz
 from dotenv import load_dotenv
 from flask import Flask, abort, request
 from flask_migrate import Migrate
-
 from linebot.exceptions import InvalidSignatureError
 
 from .db import db
-from . import handlers, reminder
+from .handlers import bp
+from .reminder import start_scheduler
 
 
 def create_app():
@@ -23,12 +22,15 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ["DB_URL"]
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    reminder.scheduler.init_app(app)
-    reminder.scheduler.scheduler.configure(timezone=pytz.timezone('Asia/Tokyo'))
+    #db読み込み
     db.init_app(app)
     Migrate(app, db)
 
-    reminder.scheduler.start()
+    #スケジューラ開始
+    start_scheduler(app)
+
+    #青写真読み込み
+    app.register_blueprint(bp)
 
     @app.route("/callback", methods=['POST'])
     def callback():
@@ -46,9 +48,6 @@ def create_app():
             abort(400)
 
         return 'OK'
-
-    app.register_blueprint(handlers.bp)
-    app.register_blueprint(reminder.bp)
 
     return app
 
