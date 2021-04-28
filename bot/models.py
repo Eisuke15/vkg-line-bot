@@ -1,25 +1,15 @@
-import os
+from .db import db
 
-from dotenv import load_dotenv
-from sqlalchemy import Column, DateTime, Integer, String, Text, create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-
-#環境変数ファイルから読み込み
-load_dotenv()
-
-#DB用初期設定
-engine = create_engine(os.environ["DB_URL"], convert_unicode=True)
-Session = sessionmaker(autocommit=False,autoflush=False,bind=engine)
-Base = declarative_base()
-
-class Group(Base):
-    __tablename__ = 'groups'
-    id = Column(Integer, primary_key=True)
-    group_id = Column(String)
-
-    def __init__(self, group_id=None):
-        self.group_id = group_id
+class Group(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.String)
         
     def __repr__(self):
-        return self.group_id
+        return str(self.group_id)
+
+class Cancellation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    day_of_the_week = db.Column(db.Integer)
+
+    def __repr__(self):
+        return str(self.day_of_the_week)

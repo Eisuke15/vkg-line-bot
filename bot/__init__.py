@@ -1,38 +1,67 @@
 import os
 
+import pytz
 from dotenv import load_dotenv
-from flask import Flask, request, abort
+from flask import Flask, abort, request
+from flask_apscheduler import APScheduler
+from flask_migrate import Migrate
 
-from .linebot import bp, handler
-from .models import Base, engine
 from linebot.exceptions import InvalidSignatureError
 
-#環境変数ファイルから読み込み
-load_dotenv()
+from .db import db
+from .handlers import bp, handler
 
-app = Flask(__name__)
 
-#Flaskのconfig設定
-app.config['SECRET_KEY'] = os.environ["SECRET_KEY"]
+def create_app():
+    #環境変数ファイルから読み込み
+    load_dotenv()
 
-@app.route("/callback", methods=['POST'])
-def callback():
-    # get X-Line-Signature header value
-    signature = request.headers['X-Line-Signature']
+    #Flaskインスタンス
+    app = Flask(__name__)
+    scheduler = APScheduler()
 
-    # get request body as text
-    body = request.get_data(as_text=True)
-    app.logger.info("Request body: " + body)
+    #Flaskの初期設定
+    app.config['SECRET_KEY'] = os.environ["SECRET_KEY"]
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ["DB_URL"]
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    # テーブル作成
-    Base.metadata.create_all(bind=engine)
+    scheduler.init_app(app)
+    scheduler.scheduler.configure(timezone=pytz.timezone('Asia/Tokyo'))
+    db.init_app(app)
+    Migrate(app, db)
 
-    # handle webhook body
-    try:
-        handler.handle(body, signature)
-    except InvalidSignatureError:
-        abort(400)
+    scheduler.start()
 
-    return 'OK'
+    @app.route("/callback", methods=['POST'])
+    def callback():
+        # get X-Line-Signature header value
+        signature = request.headers['X-Line-Signature']
 
-app.register_blueprint(bp)
+        # get request body as text
+        body = request.get_data(as_text=True)
+        app.logger.info("Request body: " + body)
+
+        # handle webhook body
+        try:
+            handler.handle(body, signature)
+        except InvalidSignatureError:
+            abort(400)
+
+        return 'OK'
+
+    @scheduler.task(
+        "cron",
+        id="reminder",
+        hour="6,1"
+    )
+    def task1():
+        """Sample task 1.
+        Added when app starts.
+        """
+        print("running task 1!")
+
+    app.register_blueprint(bp)
+
+    return app
+
+app = create_app()
