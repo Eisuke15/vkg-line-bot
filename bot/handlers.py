@@ -1,21 +1,17 @@
-import os
-
-from dotenv import load_dotenv
 from flask import Blueprint
-
 from linebot import LineBotApi, WebhookHandler
 from linebot.models import (JoinEvent, LeaveEvent, MessageEvent, TextMessage,
                             TextSendMessage)
 
 from .db import db
+from .environment import LINE_CHANNEL_ACCESS_TOKEN, LINE_CHANNEL_SECRET
 from .models import Cancellation, Group
 
 bp = Blueprint('handlers', __name__)
 
 #Lineのアクセストークン、アクセスキー取得
-load_dotenv()
-line_bot_api = LineBotApi(os.environ["LINE_CHANNEL_ACCESS_TOKEN"])
-handler = WebhookHandler(os.environ["LINE_CHANNEL_SECRET"])
+line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
+handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
@@ -38,9 +34,6 @@ def handle_join(event):
 
     db.session.add(Group(group_id=group_id))
     db.session.commit()
-
-    # pushText = TextSendMessage(text="追加ありがとうございます。")
-    # line_bot_api.push_message(to=group_id,messages=pushText)
 
 @handler.add(LeaveEvent)
 def handle_leave(event):
