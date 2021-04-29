@@ -9,7 +9,9 @@ from .environment import SPREADSHEET_URL
 from .handlers import line_bot_api
 from .models import Cancellation, Group
 
+
 def start_scheduler(app):
+
     scheduler = APScheduler()
     timezone = pytz.timezone('Asia/Tokyo')
     scheduler.init_app(app)

@@ -6,12 +6,14 @@ from linebot.models import (JoinEvent, LeaveEvent, MessageEvent, TextMessage,
 from .db import db
 from .environment import LINE_CHANNEL_ACCESS_TOKEN, LINE_CHANNEL_SECRET
 from .models import Cancellation, Group
+from collections import Counter
 
 bp = Blueprint('handlers', __name__)
 
-#Lineのアクセストークン、アクセスキー取得
+# Lineのアクセストークン、アクセスキー取得
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
+
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
@@ -22,11 +24,12 @@ def handle_message(event):
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(text=sendmessage)
-                )
+            )
         else:
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(text=text))
+
 
 @handler.add(JoinEvent)
 def handle_join(event):
@@ -34,6 +37,7 @@ def handle_join(event):
 
     db.session.add(Group(group_id=group_id))
     db.session.commit()
+
 
 @handler.add(LeaveEvent)
 def handle_leave(event):
@@ -44,29 +48,92 @@ def handle_leave(event):
         db.session.delete(Group.query.filter_by(group_id=group_id))
         db.session.commit()
 
+
+class ParseError(Exception):
+    """コマンドをパースする際のエラー"""
+
+
 def parse_cancel(text):
-    texts = text.split('\n')
-    command = texts[0].split()
-    if len(texts) == 1 and command[1] == "list":
-        cancellations = list(map(str, Cancellation.query.all()))
-        return "no cancellation" if len(cancellations) == 0 else'\n'.join(cancellations)
+    """
+    コマンドの先頭が"/cancel"の時に呼ばれる。
 
-    elif len(texts) > 1 and texts[1].isdigit():
-        day_of_the_week = int(texts[1])
+    コマンド:
+    `/cancel [add | delete | list] [args]`
+    """
 
-        if len(command) == 1:
-            db.session.add(Cancellation(day_of_the_week=day_of_the_week))
+    # datetime型のweekdayメソッドの返す数字をDBに格納する。入力、出力には漢字も用いるので変換テーブルを用意する。
+    CONV_TABLE = {
+        0: "月",
+        1: "火",
+        2: "水",
+        3: "木",
+        4: "金",
+        5: "土",
+        6: "日",
+    }
+    INV_CONV_TABLE = {v: k for k, v in CONV_TABLE.items()}
+
+    def parse_day_of_the_week(operand):
+        """
+        オペランドには曜日を指定する文字列が入力される。
+        パースできない場合は、その理由を格納した`PerseError`を投げる。
+        パースできた場合は、(曜日を指定する数字, 曜日の漢字) のタプルを返す。
+        """
+
+        message = "月~日の一文字の漢字、または0~6の数字で曜日を指定してください。"
+        if operand.isdigit():
+            try:
+                day_number = int(operand)
+                day_kanji = CONV_TABLE[day_number]
+                return (day_number, day_kanji)
+            except KeyError:
+                raise ParseError(message)
+        else:
+            try:
+                day_number = INV_CONV_TABLE[operand]
+                day_kanji = operand
+                return (day_number, day_kanji)
+            except KeyError:
+                raise ParseError(message)
+
+    command = text.split()
+    usage = "usage:\n/cancel [add | delete | list] [args]"
+    try:
+        operator = command[1]
+    except IndexError:
+        return usage
+
+    if operator == "list":
+        cancellations = [c.day_of_the_week for c in Cancellation.query.all()]
+        if len(cancellations) == 0:
+            return "キャンセルは存在しません。"
+        else:
+            return "\n".join("{}曜日, {}回".format(CONV_TABLE[day], count) for day, count in Counter(cancellations).items())
+
+    elif operator == "add":
+        try:
+            day_number, day_kanji = parse_day_of_the_week(command[2])
+        except ParseError as e:
+            return str(e)
+
+        db.session.add(Cancellation(day_of_the_week=day_number))
+        db.session.commit()
+        return "{}曜日のキャンセルを作成しました。".format(day_kanji)
+
+    elif operator == "delete":
+        try:
+            day_number, day_kanji = parse_day_of_the_week(command[2])
+        except ParseError as e:
+            return str(e)
+
+        option = Cancellation.query.filter_by(day_of_the_week=day_number).scalar()
+        if option is not None:
+            db.session.delete(option)
             db.session.commit()
-            return "created cancellation\nday_of_the_week={}".format(day_of_the_week)
+            return "{}曜日のキャンセル予定を消去しました。".format(day_kanji)
 
-        elif command[1] == "delete":
-            option = Cancellation.query.filter_by(day_of_the_week=day_of_the_week)
-            if option.count() == 0:
-                return "Cancellation whose day_of_the_week={} does not exists.".format(day_of_the_week)
-            else:
-                db.session.delete(option.first())
-                db.session.commit()
-                return "deleted cancellation\nday_of_the_week={}".format(day_of_the_week)
-            
-    return "usage:\n/cancel [-a | -d]\nday_of_the_week[0~6]"
-        
+        else:
+            return "{}曜日のキャンセルは存在しません。".format(day_kanji)
+
+    else:
+        return usage
