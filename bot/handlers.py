@@ -34,18 +34,20 @@ def handle_message(event):
 @handler.add(JoinEvent)
 def handle_join(event):
     group_id = event.source.group_id
-
-    db.session.add(Group(group_id=group_id))
-    db.session.commit()
+    option = Group.query.filter_by(group_id=group_id).scalar()
+    # 重複したgroup_idを持つレコードを追加しない。
+    if option is None:
+        db.session.add(Group(group_id=group_id))
+        db.session.commit()
 
 
 @handler.add(LeaveEvent)
 def handle_leave(event):
     group_id = event.source.group_id
-
-    option = Group.query.filter_by(group_id=group_id)
-    if option.count() > 0:
-        db.session.delete(Group.query.filter_by(group_id=group_id))
+    option = Group.query.filter_by(group_id=group_id).scalar()
+    # 念のため存在を確認し、存在する場合のみレコード削除。
+    if option is not None:
+        db.session.delete(option)
         db.session.commit()
 
 
