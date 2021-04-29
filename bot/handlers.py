@@ -1,18 +1,13 @@
+from collections import Counter
+
 from flask import Blueprint
-from linebot import LineBotApi, WebhookHandler
 from linebot.models import (JoinEvent, LeaveEvent, MessageEvent, TextMessage,
                             TextSendMessage)
 
-from .db import db
-from .environment import LINE_CHANNEL_ACCESS_TOKEN, LINE_CHANNEL_SECRET
+from .environment import handler, line_bot_api, db
 from .models import Cancellation, Group
-from collections import Counter
 
 bp = Blueprint('handlers', __name__)
-
-# Lineのアクセストークン、アクセスキー取得
-line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
-handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 
 @handler.add(MessageEvent, message=TextMessage)

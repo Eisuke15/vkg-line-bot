@@ -2,29 +2,29 @@ from flask import Flask, abort, request
 from flask_migrate import Migrate
 from linebot.exceptions import InvalidSignatureError
 
-from .db import db
+from .environment import DB_URL, SECRET_KEY, db, handler
 from .handlers import bp
 from .reminder import start_scheduler
-from .environment import SECRET_KEY, DB_URL
+
 
 def create_app():
 
-    #Flaskインスタンス
+    # Flaskインスタンス
     app = Flask(__name__)
 
-    #Flaskの初期設定
+    # Flaskの初期設定
     app.config['SECRET_KEY'] = SECRET_KEY
     app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    #db読み込み
+    # db読み込み
     db.init_app(app)
     Migrate(app, db)
 
-    #スケジューラ開始
+    # スケジューラ開始
     start_scheduler(app)
 
-    #青写真読み込み
+    # 青写真読み込み
     app.register_blueprint(bp)
 
     @app.route("/callback", methods=['POST'])
@@ -38,12 +38,13 @@ def create_app():
 
         # handle webhook body
         try:
-            handlers.handler.handle(body, signature)
+            handler.handle(body, signature)
         except InvalidSignatureError:
             abort(400)
 
         return 'OK'
 
     return app
+
 
 app = create_app()

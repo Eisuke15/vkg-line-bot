@@ -4,9 +4,7 @@ import pytz
 from flask_apscheduler import APScheduler
 from linebot.models import TextSendMessage
 
-from .db import db
-from .environment import SPREADSHEET_URL
-from .handlers import line_bot_api
+from .environment import SPREADSHEET_URL, db, line_bot_api
 from .models import Cancellation, Group
 
 
