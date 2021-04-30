@@ -9,3 +9,27 @@ services:
             - POSTGRES_DB=bot
         ports:
             - "5432:5432"
+
+    web:
+        build: .
+        volumes:
+            - .:/code
+        environment:
+            - FLASK_APP=bot
+        command: >
+            bash -c "flask db migrate &&
+            flask db upgrade &&
+            python manage.py"
+        depends_on:
+            - db
+
+    ngrok:
+        image: wernight/ngrok:latest
+        ports:
+            - 4040:4040
+        environment:
+            NGROK_PROTOCOL: HTTP
+            NGROK_PORT: web:5000
+            NGROK_DEBUG: "true"
+        depends_on:
+            - web
