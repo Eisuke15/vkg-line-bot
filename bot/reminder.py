@@ -24,9 +24,8 @@ def start_scheduler(app):
     @scheduler.task(
         "cron",
         id="reminder",
-        day_of_week="sun,tue,thu,sat,fri",
-        hour=23,
-        second="*/20",
+        day_of_week="sun,tue,thu,sat",
+        hour=6,
     )
     def reminder():
         """体温計測をリマインドする。
