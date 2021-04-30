@@ -26,7 +26,7 @@ def start_scheduler(app):
         id="reminder",
         day_of_week="sun,tue,thu,sat,fri",
         hour=23,
-        minute="*/1",
+        # minute="*/1",
     )
     def reminder():
         """体温計測をリマインドする。
@@ -47,4 +47,3 @@ def start_scheduler(app):
             else:
                 db.session.delete(option)
                 db.session.commit()
-
