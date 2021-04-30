@@ -1,3 +1,8 @@
+"""体温計測をリマインドする。
+
+Flask-Schedulerを用いて、定期的に実行するタスクを定義する。
+"""
+
 from datetime import datetime
 
 import pytz

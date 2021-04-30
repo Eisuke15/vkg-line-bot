@@ -1,7 +1,16 @@
+"""DBに格納するためのモデルを定義する。"""
+
 from .environment import db
 
 
 class Group(db.Model):
+    """参加したグループのIDを格納するクラス。
+
+    Attributes:
+        id (int): テーブル内での主キー。group_idとは関係ない。
+        group_id (str): 格納したいグループのグループid。
+    """
+
     id = db.Column(db.Integer, primary_key=True)
     group_id = db.Column(db.String)
 
@@ -10,6 +19,16 @@ class Group(db.Model):
 
 
 class Cancellation(db.Model):
+    """リマインダーのキャンセル予定を格納するクラス。
+
+    Attributes:
+        id (int): テーブル内での主キー。
+        day_of_the_week (int): キャンセル予定の曜日を表す数字。
+
+    Notes:
+        day_of_the_weekの曜日と数字の対応関係は、`datetime`モジュール`datetime`オブジェクトの`weeekday()`メソッドに従う。
+    """
+
     id = db.Column(db.Integer, primary_key=True)
     day_of_the_week = db.Column(db.Integer)
 

@@ -1,12 +1,13 @@
+"""環境変数を読み込む。
+
+その他多くのファイルから呼び出されるオブジェクトもついでにまとめてここで定義しておく。
+"""
+
 import os
 
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
 from linebot import LineBotApi, WebhookHandler
-
-"""
-環境変数、その他多くのファイルから呼び出される変数はまとめてここで定義しておく。
-"""
 
 load_dotenv()
 

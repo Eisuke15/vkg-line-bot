@@ -1,3 +1,5 @@
+"""LineBotが各Eventを受け取った時の処理を記述する。"""
+
 from collections import Counter
 
 from flask import Blueprint
@@ -12,6 +14,11 @@ bp = Blueprint('handlers', __name__)
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
+    """MessageEventの発生により呼び出される関数。
+
+    基本的には個人からのメッセージにしか反応しない。（グループでテロを起こさないため。）
+    """
+
     if event.source.type == "user":
         text = event.message.text
         if text.startswith("/cancel"):
@@ -28,6 +35,10 @@ def handle_message(event):
 
 @handler.add(JoinEvent)
 def handle_join(event):
+    """JoinEventの発生により呼び出される関数
+    botがグループに参加した際にGroupインスタンスを作成し、DBに格納する。
+    """
+
     group_id = event.source.group_id
     option = Group.query.filter_by(group_id=group_id).scalar()
     # 重複したgroup_idを持つレコードを追加しない。
@@ -38,6 +49,10 @@ def handle_join(event):
 
 @handler.add(LeaveEvent)
 def handle_leave(event):
+    """LeaveEventの発生により呼び出される関数
+    botがグループを退出した際にDBから対象のGroupレコードを消去する
+    """
+
     group_id = event.source.group_id
     option = Group.query.filter_by(group_id=group_id).scalar()
     # 念のため存在を確認し、存在する場合のみレコード削除。
@@ -47,15 +62,27 @@ def handle_leave(event):
 
 
 class ParseError(Exception):
-    """コマンドをパースする際のエラー"""
+    """コマンドをパースする際のエラー
+
+    パースができないことを表すために名前だけつけた、`Exception`のサブクラス。
+    `Exception`を継承するので、初期化の際に引数としてエラーメッセージを受け取る。
+    `str()`でクラスを文字列にすると、エラーメッセージを吐く。
+    """
 
 
 def parse_cancel(text):
-    """
-    コマンドの先頭が"/cancel"の時に呼ばれる。
+    """コマンドの先頭が"/cancel"の時に呼ばれる。
 
-    コマンド:
-    `/cancel [add | delete | list] [args]`
+    コマンド "/cancel [add | delete | list] [args]"
+
+    Args:
+        text: (str) コマンドの文全体を受け取る。
+
+    Returns:
+        str: コマンド送信者に送り返す文章
+
+    Note:
+        コマンド "/cancel [add | delete | list] [args]"
     """
 
     # datetime型のweekdayメソッドの返す数字をDBに格納する。入力、出力には漢字も用いるので変換テーブルを用意する。
@@ -71,10 +98,17 @@ def parse_cancel(text):
     INV_CONV_TABLE = {v: k for k, v in CONV_TABLE.items()}
 
     def parse_day_of_the_week(operand):
-        """
-        オペランドには曜日を指定する文字列が入力される。
-        パースできない場合は、その理由を格納した`PerseError`を投げる。
-        パースできた場合は、(曜日を指定する数字, 曜日の漢字) のタプルを返す。
+        """曜日を表す文字列を受けとり、数字と漢字に翻訳する。
+
+        Args:
+            operand (str): コマンドの中の、曜日を示すオペランドを受け取る。
+
+        Returns:
+            int: 曜日を表す数字
+            str: 曜日を表す漢字
+
+        Raises:
+            ParseError: なんらかの理由によりパースできない時に発生。
         """
 
         message = "月~日の一文字の漢字、または0~6の数字で曜日を指定してください。"
@@ -82,14 +116,14 @@ def parse_cancel(text):
             try:
                 day_number = int(operand)
                 day_kanji = CONV_TABLE[day_number]
-                return (day_number, day_kanji)
+                return day_number, day_kanji
             except KeyError:
                 raise ParseError(message)
         else:
             try:
                 day_number = INV_CONV_TABLE[operand]
                 day_kanji = operand
-                return (day_number, day_kanji)
+                return day_number, day_kanji
             except KeyError:
                 raise ParseError(message)
 
