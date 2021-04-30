@@ -25,20 +25,25 @@ def start_scheduler(app):
         "cron",
         id="reminder",
         day_of_week="sun,tue,thu,sat",
-        year="3000",
+        hour=23,
     )
-    def task1():
+    def reminder():
+        """体温計測をリマインドする。
+
+        デコレータによってこの関数を実行する日時、時刻を設定できる。
+        大きな要素を指定すると、それ以下の要素は自動的に0に指定される。
+        例: `hour=6` とすると、`minute=0`, `second=0`とみなされ、毎日朝6時に実行される。
+        """
         with app.app_context():
             todays_day = datetime.now(timezone).weekday()
-            option = Cancellation.query.filter_by(day_of_the_week=todays_day)
+            option = Cancellation.query.filter_by(day_of_the_week=todays_day).scalar()
 
-            if option.count() == 0:
+            if option is None:
                 remindtext = "体温を入力してね" + "\n" + SPREADSHEET_URL
                 pushText = TextSendMessage(text=remindtext)
                 for group in Group.query.all():
                     line_bot_api.push_message(to=group.group_id, messages=pushText)
             else:
-                db.session.delete(option.first())
+                db.session.delete(option)
                 db.session.commit()
-                print("deleted")
-            print("running task 1!")
+
