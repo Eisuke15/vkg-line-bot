@@ -1,3 +1,5 @@
+import logging
+
 from flask import Flask, abort, request
 from flask_migrate import Migrate
 from linebot.exceptions import InvalidSignatureError
@@ -16,6 +18,11 @@ def create_app():
     app.config['SECRET_KEY'] = SECRET_KEY
     app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    # loggerをgunicornのものにつけかえる。
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
 
     # db読み込み
     db.init_app(app)

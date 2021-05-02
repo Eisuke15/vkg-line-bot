@@ -1,1 +1,1 @@
-web: gunicorn bot:app --preload
+web: gunicorn --preload --log-level 'debug'  bot:app
