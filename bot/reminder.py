@@ -14,6 +14,13 @@ from .models import Cancellation, Group
 
 
 def start_scheduler(app):
+    """スケジューラを起動する。
+
+    起動、アプリの初期化、タスクの定義はこの中で行う。
+
+    Args:
+        app (Flask): flaskアプリケーション
+    """
 
     scheduler = APScheduler()
     timezone = pytz.timezone('Asia/Tokyo')
@@ -34,6 +41,8 @@ def start_scheduler(app):
         大きな要素を指定すると、それ以下の要素は自動的に0に指定される。
         例: `hour=6` とすると、`minute=0`, `second=0`とみなされ、毎日朝6時に実行される。
         """
+
+        # DBとの接続の関係で、appの設定情報を明示的に読み込む必要がある。
         with app.app_context():
             todays_day = datetime.now(timezone).weekday()
             option = Cancellation.query.filter_by(day_of_the_week=todays_day).scalar()
