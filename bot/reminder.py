@@ -9,6 +9,7 @@ Flask-Schedulerを用いて、定期的に実行するタスクを定義する�
 from datetime import datetime
 
 import pytz
+import requests
 from flask_apscheduler import APScheduler
 from linebot.models import TextSendMessage
 
@@ -70,10 +71,11 @@ def start_scheduler(app):
     def get_up_heroku():
         """herokuの自動スリープを阻止する。
 
-        herokuの無料サーバーは、30分間何のアクセスもなければ自動的にスリープし、プロセスを終了してしまう。
+        herokuの無料サーバーは、30分間何のリクエストも来なければ自動的にスリープし、プロセスを終了してしまう。
         リマインダーを機能させるためには、herokuを常に起こしておく必要がある。
-        そのために10分おきにログ出力のみ行うタスクを設定しておく。
+        そのために20分おきに自分自身に対してHTTPリクエストを発行するとともに、ログ出力のみ行うタスクを設定しておく。
         """
 
         with app.app_context():
+            requests.get("https://vkg-line-bot.herokuapp.com/")
             app.logger.info("get up heroku!")
