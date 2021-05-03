@@ -6,7 +6,7 @@ from flask import Blueprint
 from linebot.models import (JoinEvent, LeaveEvent, MessageEvent, TextMessage,
                             TextSendMessage)
 
-from .environment import handler, line_bot_api, db
+from .environment import handler, line_bot_api, db, ws
 from .models import Cancellation, Group
 
 bp = Blueprint('handlers', __name__)
@@ -28,6 +28,7 @@ def handle_message(event):
                 TextSendMessage(text=sendmessage)
             )
         else:
+            ws.update_cell(1, 1, "test1")
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(text=text))

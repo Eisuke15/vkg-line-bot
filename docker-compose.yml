@@ -19,7 +19,7 @@ services:
         command: >
             bash -c "flask db migrate &&
             flask db upgrade &&
-            python manage.py"
+            python -m bot.__init__"
         depends_on:
             - db
 

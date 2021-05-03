@@ -41,4 +41,4 @@ credentials = {
 
 # google spreadsheet 認証
 gc = gspread.service_account_from_dict(credentials)
-sh = gc.open_by_key(os.environ["SPREADSHEET_KEY"])
+ws = gc.open_by_key(os.environ["SPREADSHEET_KEY"]).sheet1

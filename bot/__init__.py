@@ -19,8 +19,8 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    if not app.debug:
-        # loggerをgunicornのものにつけかえる。
+    # 本番環境のみ、loggerをgunicornのものにつけかえる。
+    if __name__ != '__main__':
         gunicorn_logger = logging.getLogger('gunicorn.error')
         app.logger.handlers = gunicorn_logger.handlers
         app.logger.setLevel(gunicorn_logger.level)
@@ -56,3 +56,6 @@ def create_app():
 
 
 app = create_app()
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
