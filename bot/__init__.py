@@ -1,10 +1,9 @@
 import logging
 
-from flask import Flask, abort, request
+from flask import Flask
 from flask_migrate import Migrate
-from linebot.exceptions import InvalidSignatureError
 
-from .environment import DB_URL, SECRET_KEY, db, handler
+from .environment import DB_URL, SECRET_KEY, db
 from .handlers import bp
 from .reminder import start_scheduler
 
@@ -34,23 +33,6 @@ def create_app():
 
     # 青写真読み込み
     app.register_blueprint(bp)
-
-    @app.route("/callback", methods=['POST'])
-    def callback():
-        # get X-Line-Signature header value
-        signature = request.headers['X-Line-Signature']
-
-        # get request body as text
-        body = request.get_data(as_text=True)
-        app.logger.info("Request body: " + body)
-
-        # handle webhook body
-        try:
-            handler.handle(body, signature)
-        except InvalidSignatureError:
-            abort(400)
-
-        return 'OK'
 
     return app
 

@@ -2,14 +2,33 @@
 
 from collections import Counter
 
-from flask import Blueprint
+from flask import Blueprint, abort, current_app, request
+from linebot.exceptions import InvalidSignatureError
 from linebot.models import (JoinEvent, LeaveEvent, MessageEvent, TextMessage,
                             TextSendMessage)
 
-from .environment import handler, line_bot_api, db, ws
+from .environment import db, handler, line_bot_api, ws
 from .models import Cancellation, Group
 
-bp = Blueprint('handlers', __name__)
+bp = Blueprint('handlers', __name__, url_prefix="")
+
+
+@bp.route("/callback", methods=['POST'])
+def callback():
+    # get X-Line-Signature header value
+    signature = request.headers['X-Line-Signature']
+
+    # get request body as text
+    body = request.get_data(as_text=True)
+    current_app.logger.info("Request body: " + body)
+
+    # handle webhook body
+    try:
+        handler.handle(body, signature)
+    except InvalidSignatureError:
+        abort(400)
+
+    return 'OK'
 
 
 @handler.add(MessageEvent, message=TextMessage)
