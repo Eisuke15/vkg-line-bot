@@ -10,7 +10,7 @@ services:
         ports:
             - "5432:5432"
 
-    flask:
+    gunicorn:
         build: .
         volumes:
             - .:/code
@@ -19,7 +19,7 @@ services:
         command: >
             bash -c "flask db migrate &&
             flask db upgrade &&
-            python -m bot.__init__"
+            gunicorn --preload --log-level 'info' -b gunicorn:5000 'bot:create_app()'"
         depends_on:
             - db
 
@@ -29,7 +29,7 @@ services:
             - 4040:4040
         environment:
             NGROK_PROTOCOL: HTTP
-            NGROK_PORT: flask:5000
+            NGROK_PORT: gunicorn:5000
             NGROK_DEBUG: "true"
         depends_on:
-            - flask
+            - gunicorn
