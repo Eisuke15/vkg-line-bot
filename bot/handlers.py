@@ -100,9 +100,6 @@ def parse_cancel(text):
 
     Returns:
         str: コマンド送信者に送り返す文章
-
-    Note:
-        コマンド "/cancel [add | delete | list] [args]"
     """
 
     # datetime型のweekdayメソッドの返す数字をDBに格納する。入力、出力には漢字も用いるので変換テーブルを用意する。
