@@ -4,6 +4,12 @@ from .environment import db
 
 
 class Superuser(db.Model):
+    """管理者ユーザーのIDを格納するクラス。
+
+    Attributes:
+        id (int): テーブル内での主キー。user_idとは関係ない。
+        user_id (str): 格納したいユーザのユーザid。
+    """
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String, nullable=False)
