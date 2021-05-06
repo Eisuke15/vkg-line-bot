@@ -112,13 +112,7 @@ def parse_message(event):
     elif text.startswith("/cancel"):
         return parse_cancel(text)
     else:
-        try:
-            temp = parse_temperature(text)
-        except ParseError as e:
-            return str(e)
-        else:
-            update_spreadsheet(username, temp)
-            return "記入しました"
+        return parse_temperature(text, username)
 
 
 def parse_superuser(text, user_id):
@@ -262,66 +256,84 @@ def parse_cancel(text):
         return usage
 
 
-def parse_temperature(text):
-    """文字列を受け取り、数値化する。
-
-    空白、改行、タブ文字などは自動的に除去する。
+def parse_temperature(text, username):
+    """いずれのコマンドにも該当しない時呼ばれる。
 
     Args:
-        text: (str) 文字列
+        text: (str) コマンドの文全体を受け取る。
+        username: (str) ユーザーネーム
 
     Returns:
-        float: 数値化した結果
-
-    Raises:
-        ParseError: 入力文字列が数値でない時に発生
+        str: メッセージ送信者に送り返す文章
     """
 
-    text = ''.join(text.split())
-    text = zen_to_han(text)
+    def temp_str_to_float(text):
+        """体温を表す文字列を受け取り、数値化する。
+
+        空白、改行、タブ文字などは自動的に除去する。
+
+        Args:
+            text: (str) 文字列
+
+        Returns:
+            float: 数値化した結果
+
+        Raises:
+            ParseError: 入力文字列が数値でない時に発生
+        """
+
+        text = ''.join(text.split())
+        text = zen_to_han(text)
+        try:
+            return float(text)
+        except ValueError:
+            raise ParseError("数値で入力してください。")
+
+    def update_spreadsheet(name, temp):
+        """スプレッドシートに情報を記入する。
+
+        記入するセルの場所はこの関数内で探し出す。
+        該当の場所が存在しない場合、インデックスまたはカラムを作成する。
+
+        Args:
+            name: (str) 体温を測定した人
+            temp: (float) 体温
+        """
+        timezone = pytz.timezone('Asia/Tokyo')
+        now = datetime.now(timezone)
+        today = str(now.date())
+
+        # 記入先のワークシート
+        from .environment import sh
+
+        # 名前のインデックス、日付のカラムを取得
+        names = sh.col_values(1)
+        days = sh.row_values(1)
+
+        # 日付の該当する列を探し出す。存在しない場合は一番右に作成
+        if days[-1] == today:
+            col = len(days)
+        else:
+            col = len(days) + 1
+            sh.update_cell(1, col, today)
+
+        # 名前の該当する行を探し出す。存在しない場合は一番下に作成
+        try:
+            row = names.index(name) + 1
+        except ValueError:
+            row = len(names) + 1
+            sh.update_cell(row, 1, name)
+
+        # セルをアップデート
+        sh.update_cell(row, col, temp)
+
     try:
-        return float(text)
-    except ValueError:
-        raise ParseError("数値で入力してください。")
-
-
-def update_spreadsheet(name, temp):
-    """スプレッドシートに情報を記入する。
-
-    記入するセルの場所はこの関数内で探し出す。
-    該当の場所が存在しない場合、インデックスまたはカラムを作成する。
-
-    Args:
-        name: (str) 体温を測定した人
-        temp: (float) 体温
-    """
-    timezone = pytz.timezone('Asia/Tokyo')
-    now = datetime.now(timezone)
-    today = str(now.date())
-
-    # 記入先のワークシート
-    from .environment import sh
-
-    # 名前のインデックス、日付のカラムを取得
-    names = sh.col_values(1)
-    days = sh.row_values(1)
-
-    # 日付の該当する列を探し出す。存在しない場合は一番右に作成
-    if days[-1] == today:
-        col = len(days)
+        temp = temp_str_to_float(text)
+    except ParseError as e:
+        return str(e)
     else:
-        col = len(days) + 1
-        sh.update_cell(1, col, today)
-
-    # 名前の該当する行を探し出す。存在しない場合は一番下に作成
-    try:
-        row = names.index(name) + 1
-    except ValueError:
-        row = len(names) + 1
-        sh.update_cell(row, 1, name)
-
-    # セルをアップデート
-    sh.update_cell(row, col, temp)
+        update_spreadsheet(username, temp)
+        return "記入しました"
 
 
 def notify_superuser(e, event):
