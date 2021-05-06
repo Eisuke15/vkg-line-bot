@@ -3,6 +3,15 @@
 from .environment import db
 
 
+class Superuser(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String, nullable=False)
+
+    def __repr__(self):
+        return str(self.user_id)
+
+
 class Group(db.Model):
     """参加したグループのIDを格納するクラス。
 
@@ -12,7 +21,7 @@ class Group(db.Model):
     """
 
     id = db.Column(db.Integer, primary_key=True)
-    group_id = db.Column(db.String)
+    group_id = db.Column(db.String, nullable=False)
 
     def __repr__(self):
         return str(self.group_id)
