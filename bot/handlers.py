@@ -11,7 +11,7 @@ from linebot.models import (JoinEvent, LeaveEvent, MessageEvent, TextMessage,
 from mojimoji import zen_to_han
 
 from .environment import db, handler, line_bot_api
-from .models import Cancellation, Group
+from .models import Cancellation, Group, Superuser
 
 bp = Blueprint('handlers', __name__, url_prefix="")
 
@@ -39,14 +39,16 @@ def handle_message(event):
     """MessageEventの発生により呼び出される関数。
 
     基本的には個人からのメッセージにしか反応しない。（グループでテロを起こさないため。）
+    何らかのエラーが発生した時は、使用者には`error`とだけ表示して、管理者にLineで通知する。
     """
 
     if event.source.type == "user":
         try:
             sendmessage = parse_message(event)
         except Exception as e:
-            current_app.logger.info(str(e))
-        else:
+            notify_superuser(e, event)
+            sendmessage = "error"
+        finally:
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(text=sendmessage)
@@ -274,3 +276,26 @@ def update_spreadsheet(name, temp):
 
     # セルをアップデート
     sh.update_cell(row, col, temp)
+
+
+def notify_superuser(e, event):
+    """ エラーを管理者へ通知する。
+
+    Args:
+        e: (Exception) 例外本体
+        event: (Event) Webhookイベント
+    """
+
+    # ログに出力
+    current_app.logger.info(str(e))
+
+    # イベント内容を取得
+    text = event.message.text
+    user_id = event.source.user_id
+    username = line_bot_api.get_profile(user_id).display_name
+
+    # 管理者に内容を通知
+    remindtext = "エラー発生\nusername: {}\nmessage: {}\nerror: {}".format(username, text, str(e))
+    pushText = TextSendMessage(text=remindtext)
+    for user in Superuser.query.all():
+        line_bot_api.push_message(to=user.user_id, messages=pushText)
