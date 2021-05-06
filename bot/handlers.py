@@ -107,7 +107,9 @@ def parse_message(event):
     text = event.message.text
     user_id = event.source.user_id
     username = line_bot_api.get_profile(user_id).display_name
-    if text.startswith("/cancel"):
+    if text.startswith("/su"):
+        return parse_superuser(text, user_id)
+    elif text.startswith("/cancel"):
         return parse_cancel(text)
     else:
         try:
@@ -117,6 +119,50 @@ def parse_message(event):
         else:
             update_spreadsheet(username, temp)
             return "記入しました"
+
+
+def parse_superuser(text, user_id):
+    """コマンドの先頭が"/su"の時に呼ばれる。
+
+    コマンド "/su [add | delete | list] [args]"
+
+    Args:
+        text: (str) コマンドの文全体を受け取る。
+
+    Returns:
+        str: コマンド送信者に送り返す文章
+    """
+
+    command = text.split()
+    usage = "usage:\n/su [add | delete | list] [args]"
+    try:
+        operator = command[1]
+    except IndexError:
+        return usage
+
+    if operator == "list":
+        superusers = [line_bot_api.get_profile(su.user_id).display_name for su in Superuser.query.all()]
+        if len(superusers) == 0:
+            return "管理者は存在しません。"
+        else:
+            return "\n".join(superusers)
+
+    elif operator == "add":
+        db.session.add(Superuser(user_id=user_id))
+        db.session.commit()
+        return "管理者に追加しました。"
+
+    elif operator == "delete":
+        option = Superuser.query.filter_by(user_id=user_id).scalar()
+        if option is not None:
+            db.session.delete(option)
+            db.session.commit()
+            return "管理者から削除しました"
+        else:
+            return "管理者ではありません。"
+
+    else:
+        return usage
 
 
 def parse_cancel(text):
