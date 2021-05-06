@@ -1,13 +1,16 @@
 """LineBotが各Eventを受け取った時の処理を記述する。"""
 
 from collections import Counter
+from datetime import datetime
 
+import pytz
 from flask import Blueprint, abort, current_app, request
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (JoinEvent, LeaveEvent, MessageEvent, TextMessage,
                             TextSendMessage)
+from mojimoji import zen_to_han
 
-from .environment import db, handler, line_bot_api, ws
+from .environment import db, handler, line_bot_api
 from .models import Cancellation, Group
 
 bp = Blueprint('handlers', __name__, url_prefix="")
@@ -39,18 +42,15 @@ def handle_message(event):
     """
 
     if event.source.type == "user":
-        text = event.message.text
-        if text.startswith("/cancel"):
-            sendmessage = parse_cancel(text)
+        try:
+            sendmessage = parse_message(event)
+        except Exception as e:
+            current_app.logger.info(str(e))
+        else:
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(text=sendmessage)
             )
-        else:
-            ws.update_cell(1, 1, "test1")
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text=text))
 
 
 @handler.add(JoinEvent)
@@ -88,6 +88,33 @@ class ParseError(Exception):
     `Exception`を継承するので、初期化の際に引数としてエラーメッセージを受け取る。
     `str()`でクラスを文字列にすると、エラーメッセージを吐く。
     """
+
+
+def parse_message(event):
+    """メッセージイベントが発生した際に最初に呼ばれる関数。
+
+    受け取った文字列の先頭を解析して各関数に処理を振り分ける。
+
+    Args:
+        event: (Event) メッセージイベントオブジェクト。中にさまざまな情報が入っている。
+
+    Returns:
+        str: 送信相手に送り返す文章
+    """
+
+    text = event.message.text
+    user_id = event.source.user_id
+    username = line_bot_api.get_profile(user_id).display_name
+    if text.startswith("/cancel"):
+        return parse_cancel(text)
+    else:
+        try:
+            temp = parse_temperature(text)
+        except ParseError as e:
+            return str(e)
+        else:
+            update_spreadsheet(username, temp)
+            return "記入しました"
 
 
 def parse_cancel(text):
@@ -185,3 +212,65 @@ def parse_cancel(text):
 
     else:
         return usage
+
+
+def parse_temperature(text):
+    """文字列を受け取り、数値化する。
+
+    空白、改行、タブ文字などは自動的に除去する。
+
+    Args:
+        text: (str) 文字列
+
+    Returns:
+        float: 数値化した結果
+
+    Raises:
+        ParseError: 入力文字列が数値でない時に発生
+    """
+
+    text = ''.join(text.split())
+    text = zen_to_han(text)
+    try:
+        return float(text)
+    except ValueError:
+        raise ParseError("数値で入力してください。")
+
+
+def update_spreadsheet(name, temp):
+    """スプレッドシートに情報を記入する。
+
+    記入するセルの場所はこの関数内で探し出す。
+    該当の場所が存在しない場合、インデックスまたはカラムを作成する。
+
+    Args:
+        name: (str) 体温を測定した人
+        temp: (float) 体温
+    """
+    timezone = pytz.timezone('Asia/Tokyo')
+    now = datetime.now(timezone)
+    today = str(now.date())
+
+    # 記入先のワークシート
+    from .environment import sh
+
+    # 名前のインデックス、日付のカラムを取得
+    names = sh.col_values(1)
+    days = sh.row_values(1)
+
+    # 日付の該当する列を探し出す。存在しない場合は一番右に作成
+    if days[-1] == today:
+        col = len(days)
+    else:
+        col = len(days) + 1
+        sh.update_cell(1, col, today)
+
+    # 名前の該当する行を探し出す。存在しない場合は一番下に作成
+    try:
+        row = names.index(name) + 1
+    except ValueError:
+        row = len(names) + 1
+        sh.update_cell(row, 1, name)
+
+    # セルをアップデート
+    sh.update_cell(row, col, temp)
