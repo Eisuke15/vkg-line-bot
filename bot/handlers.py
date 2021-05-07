@@ -312,12 +312,17 @@ def parse_temperature(text, user_id):
         ids = sh.col_values(1)
         days = sh.row_values(1)
 
-        # 日付の該当する列を探し出す。存在しない場合は一番右に作成
+        # 日付の該当する列を探し出す。存在しない場合は一番右に作成。列が存在しない場合は列を追加。
         if days[-1] == today:
             col = len(days)
         else:
             col = len(days) + 1
-            sh.update_cell(1, col, today)
+            try:
+                sh.update_cell(1, col, today)
+            except APIError:
+                # 適当に10行追加している。
+                sh.add_cols(10)
+                sh.update_cell(1, col, today)
 
         # 名前の該当する行を探し出す。存在しない場合は一番下に作成
         try:
