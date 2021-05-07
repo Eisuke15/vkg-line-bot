@@ -11,7 +11,7 @@ from linebot.models import (JoinEvent, LeaveEvent, MessageEvent, TextMessage,
                             TextSendMessage)
 from mojimoji import zen_to_han
 
-from .environment import db, handler, line_bot_api
+from .environment import db, handler, line_bot_api, sh
 from .models import Cancellation, Group, Superuser
 
 bp = Blueprint('handlers', __name__, url_prefix="")
@@ -304,9 +304,6 @@ def parse_temperature(text, user_id):
         timezone = pytz.timezone('Asia/Tokyo')
         now = datetime.now(timezone)
         today = str(now.date())
-
-        # 記入先のワークシート
-        from .environment import sh
 
         # ユーザID,名前のインデックス、日付のカラムを取得
         ids = sh.col_values(1)
