@@ -5,6 +5,7 @@ from datetime import datetime
 
 import pytz
 from flask import Blueprint, abort, current_app, request
+from gspread.exceptions import APIError
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (JoinEvent, LeaveEvent, MessageEvent, TextMessage,
                             TextSendMessage)
@@ -46,7 +47,7 @@ def handle_message(event):
         try:
             sendmessage = parse_message(event)
         except Exception as e:
-            notify_superuser(str(e), event)
+            notify_superuser(e, event)
             sendmessage = "error"
         finally:
             line_bot_api.reply_message(
@@ -106,13 +107,12 @@ def parse_message(event):
 
     text = event.message.text
     user_id = event.source.user_id
-    username = line_bot_api.get_profile(user_id).display_name
     if text.startswith("/su"):
         return parse_superuser(text, user_id)
     elif text.startswith("/cancel"):
         return parse_cancel(text)
     else:
-        return parse_temperature(text, username)
+        return parse_temperature(text, user_id)
 
 
 def parse_superuser(text, user_id):
@@ -256,12 +256,12 @@ def parse_cancel(text):
         return usage
 
 
-def parse_temperature(text, username):
+def parse_temperature(text, user_id):
     """いずれのコマンドにも該当しない時呼ばれる。
 
     Args:
         text: (str) コマンドの文全体を受け取る。
-        username: (str) ユーザーネーム
+        user_id: (str) ユーザーID
 
     Returns:
         str: メッセージ送信者に送り返す文章
@@ -289,16 +289,18 @@ def parse_temperature(text, username):
         except ValueError:
             raise ParseError("数値で入力してください。")
 
-    def update_spreadsheet(name, temp):
+    def update_spreadsheet(user_id, temp):
         """スプレッドシートに情報を記入する。
 
         記入するセルの場所はこの関数内で探し出す。
         該当の場所が存在しない場合、インデックスまたはカラムを作成する。
 
         Args:
-            name: (str) 体温を測定した人
+            user_id: (str) 体温を測定したユーザのID
             temp: (float) 体温
         """
+
+        # 関数が呼ばれた日本時間での日付を取得
         timezone = pytz.timezone('Asia/Tokyo')
         now = datetime.now(timezone)
         today = str(now.date())
@@ -306,8 +308,8 @@ def parse_temperature(text, username):
         # 記入先のワークシート
         from .environment import sh
 
-        # 名前のインデックス、日付のカラムを取得
-        names = sh.col_values(1)
+        # ユーザID,名前のインデックス、日付のカラムを取得
+        ids = sh.col_values(1)
         days = sh.row_values(1)
 
         # 日付の該当する列を探し出す。存在しない場合は一番右に作成
@@ -319,10 +321,15 @@ def parse_temperature(text, username):
 
         # 名前の該当する行を探し出す。存在しない場合は一番下に作成
         try:
-            row = names.index(name) + 1
+            row = ids.index(user_id) + 1
         except ValueError:
-            row = len(names) + 1
-            sh.update_cell(row, 1, name)
+            row = len(ids) + 1
+            sh.update_cell(row, 1, user_id)
+
+        # idの列の右側のユーザー名が更新された場合、書き換える。
+        username = get_username(user_id)
+        if sh.cell(row, 2).value != username:
+            sh.update_cell(row, 2, username)
 
         # セルをアップデート
         sh.update_cell(row, col, temp)
@@ -332,7 +339,7 @@ def parse_temperature(text, username):
     except ParseError as e:
         return str(e)
     else:
-        update_spreadsheet(username, temp)
+        update_spreadsheet(user_id, temp)
         return "記入しました"
 
 
@@ -340,20 +347,32 @@ def notify_superuser(e, event):
     """ エラーを管理者へ通知する。
 
     Args:
-        e: (str) 通知するエラー文字列
+        e: (Exception) 通知するエラー本体
         event: (Event) Webhookイベント
     """
 
     # ログに出力
-    current_app.logger.info(e)
+    current_app.logger.info("{}: {}".format(type(e), str(e)))
 
     # イベント内容を取得
     text = event.message.text
     user_id = event.source.user_id
-    username = line_bot_api.get_profile(user_id).display_name
+    username = get_username(user_id)
 
     # 管理者に内容を通知
-    remindtext = "エラー発生\nusername: {}\nmessage: {}\nerror: {}".format(username, text, e)
+    remindtext = "エラー発生\nusername: {}\nmessage: {}\n{}".format(username, text, "{}: {}".format(type(e), str(e)))
     pushText = TextSendMessage(text=remindtext)
     for user in Superuser.query.all():
         line_bot_api.push_message(to=user.user_id, messages=pushText)
+
+
+def get_username(user_id):
+    """ユーザIDからユーザ名を取得
+
+    Args:
+        user_id: (str) ユーザーID
+
+    Returns:
+        str: ユーザー名
+    """
+    return line_bot_api.get_profile(user_id).display_name
