@@ -46,7 +46,7 @@ def handle_message(event):
         try:
             sendmessage = parse_message(event)
         except Exception as e:
-            notify_superuser(e, event)
+            notify_superuser(str(e), event)
             sendmessage = "error"
         finally:
             line_bot_api.reply_message(
@@ -340,12 +340,12 @@ def notify_superuser(e, event):
     """ エラーを管理者へ通知する。
 
     Args:
-        e: (Exception) 例外本体
+        e: (str) 通知するエラー文字列
         event: (Event) Webhookイベント
     """
 
     # ログに出力
-    current_app.logger.info(str(e))
+    current_app.logger.info(e)
 
     # イベント内容を取得
     text = event.message.text
@@ -353,7 +353,7 @@ def notify_superuser(e, event):
     username = line_bot_api.get_profile(user_id).display_name
 
     # 管理者に内容を通知
-    remindtext = "エラー発生\nusername: {}\nmessage: {}\nerror: {}".format(username, text, str(e))
+    remindtext = "エラー発生\nusername: {}\nmessage: {}\nerror: {}".format(username, text, e)
     pushText = TextSendMessage(text=remindtext)
     for user in Superuser.query.all():
         line_bot_api.push_message(to=user.user_id, messages=pushText)
