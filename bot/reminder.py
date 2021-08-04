@@ -35,7 +35,7 @@ def start_scheduler(app):
     @scheduler.task(
         "cron",
         id="reminder",
-        day_of_week="sun,tue,thu,sat",
+        day_of_week="sun,thu,sat",
         hour=6,
     )
     def reminder():
